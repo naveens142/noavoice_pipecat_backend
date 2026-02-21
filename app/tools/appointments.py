@@ -10,7 +10,14 @@ from typing import Any, Dict
 from app.integrations.calcom.client import calcom_client
 from app.config.database import AsyncSessionLocal
 from app.models.booking import Booking, BookingStatus
-
+# from app.utils.datetime_helpers import (
+#     parse_natural_datetime,
+#     format_datetime_for_display
+# )
+from app.utils.booking_helpers import validate_or_suggest, validate_cancel, validate_reschedule
+from app.utils.booking_lookup_helpers import get_booking_uid
+from app.utils.datetime_helpers import parse_datetime, normalize_to_utc
+logging.basicConfig(level=logging.INFO) 
 logger = logging.getLogger(__name__)
 
 
@@ -18,65 +25,43 @@ logger = logging.getLogger(__name__)
 # JSON SCHEMA TOOL DEFINITIONS (for LLM function calling)
 # ═══════════════════════════════════════════════════════════════════
 
+# Update the tool schema for better LLM understanding
 TOOLS_SCHEMA = [
-
-    {
-        "type": "function",
-        "function": {
-            "name": "get_available_slots",
-            "description": """
-                Get available appointment slots for the dental clinic.
-                Use this when patient asks about availability, free slots,
-                or wants to know when they can book an appointment.
-                Always ask for preferred date before calling this.
-            """,
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "date": {
-                        "type": "string",
-                        "description": "Date to check availability in YYYY-MM-DD format. Example: '2024-08-13'"
-                    },
-                    "timezone": {
-                        "type": "string",
-                        "description": "Patient's timezone. Default is 'Asia/Kolkata'",
-                        "default": "Asia/Kolkata"
-                    }
-                },
-                "required": ["date"]
-            }
-        }
-    },
-
     {
         "type": "function",
         "function": {
             "name": "book_appointment",
             "description": """
                 Book a dental appointment for a patient.
-                Use this when patient confirms they want to book an appointment.
-                You MUST collect name, email, and start time before calling.
-                Phone number is optional but recommended.
-                Start time must be from available slots only.
+                IMPORTANT: When user says natural language like "tomorrow at 3pm" 
+                or "next monday morning", pass it directly to this function.
+                The function will handle conversion to proper format.
             """,
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "start": {
+                    "datetime_natural": {
                         "type": "string",
-                        "description": "Appointment start time in ISO 8601 UTC format. Example: '2024-08-13T09:00:00Z'"
+                        "description": """
+                            Natural language date and time from user. Examples:
+                            - "tomorrow at 3pm"
+                            - "next monday morning"
+                            - "august 25 at 2:30pm"
+                            - "friday afternoon"
+                            Do NOT convert this - pass exactly as user said it.
+                        """
                     },
                     "name": {
                         "type": "string",
-                        "description": "Patient's full name. Example: 'John Doe'"
+                        "description": "Patient's full name"
                     },
                     "email": {
                         "type": "string",
-                        "description": "Patient's email address. Example: 'john@example.com'"
+                        "description": "Patient's email address"
                     },
                     "phone": {
                         "type": "string",
-                        "description": "Patient's phone number with country code. Example: '+919876543210'",
+                        "description": "Patient's phone number with country code"
                     },
                     "timezone": {
                         "type": "string",
@@ -85,99 +70,14 @@ TOOLS_SCHEMA = [
                     },
                     "notes": {
                         "type": "string",
-                        "description": "Any additional notes or reason for visit"
+                        "description": "Any additional notes"
                     }
                 },
-                "required": ["start", "name", "email"]
-            }
-        }
-    },
-
-    {
-        "type": "function",
-        "function": {
-            "name": "get_booking",
-            "description": """
-                Get details of an existing booking.
-                Use this when patient wants to check their appointment details.
-                Can search by booking UID or email address.
-            """,
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "booking_uid": {
-                        "type": "string",
-                        "description": "Unique booking ID from Cal.com. Example: 'abc123xyz'"
-                    },
-                    "email": {
-                        "type": "string",
-                        "description": "Patient's email to find their bookings"
-                    }
-                },
-                "required": []
-            }
-        }
-    },
-
-    {
-        "type": "function",
-        "function": {
-            "name": "reschedule_appointment",
-            "description": """
-                Reschedule an existing appointment to a new time.
-                Use this when patient wants to change their appointment time.
-                You need the booking UID and new desired time.
-                Always check available slots first before rescheduling.
-            """,
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "booking_uid": {
-                        "type": "string",
-                        "description": "Unique booking ID of appointment to reschedule"
-                    },
-                    "new_start": {
-                        "type": "string",
-                        "description": "New appointment time in ISO 8601 UTC format. Example: '2024-08-15T10:00:00Z'"
-                    },
-                    "reason": {
-                        "type": "string",
-                        "description": "Reason for rescheduling"
-                    }
-                },
-                "required": ["booking_uid", "new_start"]
-            }
-        }
-    },
-
-    {
-        "type": "function",
-        "function": {
-            "name": "cancel_appointment",
-            "description": """
-                Cancel an existing appointment.
-                Use this when patient explicitly asks to cancel their appointment.
-                Always confirm with patient before cancelling.
-                You need the booking UID to cancel.
-            """,
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "booking_uid": {
-                        "type": "string",
-                        "description": "Unique booking ID of appointment to cancel"
-                    },
-                    "reason": {
-                        "type": "string",
-                        "description": "Reason for cancellation"
-                    }
-                },
-                "required": ["booking_uid"]
+                "required": ["datetime_natural", "name", "email"]
             }
         }
     }
 ]
-
 
 # ═══════════════════════════════════════════════════════════════════
 # TOOL IMPLEMENTATIONS
@@ -243,8 +143,40 @@ async def book_appointment(
 ) -> str:
     """Book a new appointment and save to database"""
     try:
+
+        logger.info(f"Booking request: {start}")
+
+        # ✅ STEP 1: parse natural language → ISO UTC
+
+        date, time, iso_utc = parse_datetime(start, timezone)
+        start= iso_utc
+
+        if not iso_utc:
+
+            return "Sorry, I couldn't understand the date and time. Please try again."
+
+
+        logger.info(f"Parsed ISO: {iso_utc}")
+
+        email=email.strip().lower()
+        name=name.strip().lower()
         logger.info(f"📅 Booking appointment for {name} ({email}) at {start}")
-        
+
+        # validate booking
+        valid, slot, message = await validate_or_suggest(start,timezone)
+
+        if not valid:
+            logger.info(f"📅 Booking appointment validation failed for {name} suggested_slot {slot} reason:{message}")
+            return {
+
+                "status": "failed",
+
+                "message": message,
+
+                "suggested_slot": slot
+
+            }
+                
         # Call Cal.com V2 API
         result = await calcom_client.create_booking(
             start=start,
@@ -271,7 +203,12 @@ async def book_appointment(
                 # Parse datetime strings
                 start_dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
                 end_dt   = datetime.fromisoformat(end_time.replace("Z", "+00:00")) if end_time else None
-                
+                logger.info(f"start_time: {start_time}")
+                logger.info(f"end_time: {end_time}")
+
+                logger.info(f"end_time: {end_time}")
+                logger.info(f"end_dt: {end_dt}")
+
                 new_booking = Booking(
                     calcom_booking_id  = booking_id,
                     calcom_booking_uid = booking_uid,
@@ -322,11 +259,15 @@ async def book_appointment(
 
 
 async def get_booking(
-    booking_uid: str = None,
     email: str = None
 ) -> str:
     """Get booking details by UID or email"""
     try:
+        email=email.strip().lower()
+        booking_uid = await get_booking_uid(email=email)
+
+        if not booking_uid:
+            return "No booking found."
         if booking_uid:
             logger.info(f"🔍 Getting booking: {booking_uid}")
             result = await calcom_client.get_booking(booking_uid)
@@ -374,13 +315,35 @@ async def get_booking(
 
 
 async def reschedule_appointment(
-    booking_uid: str,
+        email: str,
     new_start: str,
-    reason: str = None
+    reason: str = None,
+    timezone: str = "Asia/Kolkata",
 ) -> str:
     """Reschedule an existing appointment"""
     try:
+        # ✅ STEP 1: parse natural language → ISO UTC
+        new_start, time, iso_utc = parse_datetime(start, timezone)
+        start= iso_utc
+
+        if not iso_utc:
+
+            return "Sorry, I couldn't understand the date and time. Please try again."
+
+
+        logger.info(f"Parsed ISO: {iso_utc}")
+
+        email=email.strip().lower()
+        booking_uid = await get_booking_uid(email=email)
+        if not booking_uid:
+            return "No upcoming booking found to reschedule."
+        
         logger.info(f"🔄 Rescheduling booking {booking_uid} to {new_start}")
+
+        valid, msg = await validate_reschedule(booking_uid, new_start, timezone)
+        if not valid:
+            logger.info(f"📅 Rescheduling appointment validation failed for {booking_uid}  reason:{msg}")
+            return msg
         
         result = await calcom_client.reschedule_booking(
             booking_uid=booking_uid,
@@ -434,12 +397,23 @@ async def reschedule_appointment(
 
 
 async def cancel_appointment(
-    booking_uid: str,
+    email: str,
     reason: str = None
 ) -> str:
     """Cancel an existing appointment"""
     try:
+        email=email.strip().lower()
+        booking_uid = await get_booking_uid(email=email)
+
+        if not booking_uid:
+            return "No upcoming booking found to cancel."
+        
         logger.info(f"❌ Cancelling booking: {booking_uid}")
+
+        valid, msg = await validate_cancel(booking_uid)
+        if not valid:
+            logger.info(f"📅  Cancelling appointment validation failed for {booking_uid}  reason:{msg}")
+            return msg
         
         result = await calcom_client.cancel_booking(
             booking_uid=booking_uid,
@@ -491,39 +465,67 @@ async def execute_tool(
     tool_args: Dict[str, Any],
     session_id: str = None
 ) -> str:
+
     """
-    Main dispatcher - LLM calls this with tool name and arguments
-    
-    Usage in agent:
-        result = await execute_tool("book_appointment", {
-            "start": "2024-08-13T09:00:00Z",
-            "name": "John Doe",
-            "email": "john@example.com",
-            "phone": "+919876543210"
-        })
+    Main dispatcher for LiveKit agent tool execution
     """
-    
-    TOOL_MAP = {
-        "get_available_slots":  get_available_slots,
-        "book_appointment":     book_appointment,
-        "get_booking":          get_booking,
-        "reschedule_appointment": reschedule_appointment,
-        "cancel_appointment":   cancel_appointment,
-    }
-    
-    tool_func = TOOL_MAP.get(tool_name)
-    
-    if not tool_func:
-        logger.warning(f"⚠️ Unknown tool: {tool_name}")
-        return f"Unknown tool: {tool_name}"
-    
-    logger.info(f"🔧 Executing tool: {tool_name} with args: {tool_args}")
-    
-    # Add session_id for booking tracking
-    if tool_name == "book_appointment" and session_id:
-        tool_args["session_id"] = session_id
-    
-    return await tool_func(**tool_args)
+
+    try:
+
+        # ✅ normalize email if present
+        if "email" in tool_args and tool_args["email"]:
+            tool_args["email"] = tool_args["email"].strip().lower()
+
+        # ✅ Remove booking_uid if LLM tries to send it
+        # We will fetch booking_uid internally using email + session
+        tool_args.pop("booking_uid", None)
+
+        # ✅ inject session_id automatically
+        if session_id:
+
+            tool_args["session_id"] = session_id
+
+
+        TOOL_MAP = {
+
+            "get_available_slots": get_available_slots,
+
+            "book_appointment": book_appointment,
+
+            "get_booking": get_booking,
+
+            "reschedule_appointment": reschedule_appointment,
+
+            "cancel_appointment": cancel_appointment,
+
+        }
+
+
+        tool_func = TOOL_MAP.get(tool_name)
+
+
+        if not tool_func:
+
+            logger.warning(f"Unknown tool: {tool_name}")
+
+            return "Sorry, I cannot perform that action."
+
+
+        logger.info(f"Executing tool: {tool_name}")
+        logger.info(f"Args: {tool_args}")
+
+
+        result = await tool_func(**tool_args)
+
+
+        return result
+
+
+    except Exception as e:
+
+        logger.error(f"Tool execution error: {e}", exc_info=True)
+
+        return "Something went wrong while processing your request."
 
 
 # ═══════════════════════════════════════════════════════════════════

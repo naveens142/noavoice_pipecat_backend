@@ -133,7 +133,8 @@ class CalComV2Client:
                 "language": "en"
             }
         }
-        
+
+                    
         # Add phone if provided (V2 supports this natively!)
         if phone:
             payload["attendee"]["phoneNumber"] = phone
@@ -141,7 +142,9 @@ class CalComV2Client:
         # Add notes as booking field response
         if notes:
             payload["bookingFieldsResponses"] = {"notes": notes}
+
         
+        logger.info(f"Cal.com create_booking payload {payload}")        
         return await self._request("POST", "/bookings", data=payload)
 
     async def get_booking(self, booking_uid: str) -> Dict:
