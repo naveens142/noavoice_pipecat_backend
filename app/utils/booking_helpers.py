@@ -11,13 +11,13 @@ Supports:
 ✔ suggest next free slot
 """
 
-import logging
+
 from datetime import datetime, timezone, timedelta
 
 from app.integrations.calcom.client import calcom_client
 
-
-logger = logging.getLogger(__name__)
+from app.config.logging import app_logger
+logger = app_logger
 
 
 # ═══════════════════════════════════════
@@ -88,12 +88,18 @@ async def is_slot_available(
 
         slots = result.get("data", {})
 
+        # Normalize the requested datetime to UTC for comparison
+        requested_dt = parse_utc(iso_utc)
 
         for day in slots.values():
 
             for slot in day:
 
-                if slot["start"] == iso_utc:
+                # Normalize slot start time to UTC for comparison
+                slot_dt = parse_utc(slot["start"])
+                
+                # Compare datetime objects instead of strings (handles format differences)
+                if slot_dt == requested_dt:
 
                     return True
 
@@ -279,7 +285,10 @@ async def suggest_next_slot(
 
             if slots[day]:
 
-                return slots[day][0]["start"]
+                # Normalize the slot start time to UTC Z format
+                slot_start = slots[day][0]["start"]
+                dt = parse_utc(slot_start)
+                return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
         return None

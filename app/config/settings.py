@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     
     # Neon PostgreSQL
     DATABASE_URL: str
+    DB_SCHEMA: str = "noavoice_ns"
     
     class Config:
         env_file = ".env"

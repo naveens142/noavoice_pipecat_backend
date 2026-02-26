@@ -63,8 +63,13 @@ celerybeat-schedule
 # dotenv
 .env
 .env.*
-!*.env.example
-myenv
+!.env.example
+myenv/
+
+# IDE
+.idea/
+*.sublime-project
+*.sublime-workspace
 
 # Docker
 *.log
@@ -72,6 +77,16 @@ docker-compose.override.yml
 
 # Alembic
 alembic/versions/*.pyc
+alembic/versions/__pycache__/
+
+# Database
+*.sqlite
+*.db
+
+# IDE & Editors
+*.swp
+*.swo
+*.sublime-settings
 
 # VS Code
 .vscode/

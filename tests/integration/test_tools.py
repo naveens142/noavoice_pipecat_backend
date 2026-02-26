@@ -11,7 +11,7 @@ async def test_all_tools():
     result = await execute_tool(
         "get_available_slots",
         {
-            "date": "2026-02-19",
+            "date": "2026-03-04",
             "timezone": "Asia/Kolkata"
         }
     )
@@ -29,7 +29,7 @@ async def test_all_tools():
         {
 
             # ✅ CHANGED HERE
-            "start": "23rd feb at 11am",
+            "datetime_natural": "4th march at 11am",
 
             "name": "Naveen Sharma",
 
@@ -71,7 +71,7 @@ async def test_all_tools():
             # only email needed now
             "email": "test_westack@gmail.com",
 
-            "new_start": "24th feb at 10AM"
+            "new_start": "4th march at 12PM"
         }
     )
 

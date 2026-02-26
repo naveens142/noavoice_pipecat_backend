@@ -1,15 +1,16 @@
-from sqlalchemy import Column, String, DateTime, Integer, Text, Enum
+from sqlalchemy import Column, String, DateTime, Integer, Text, Enum, CheckConstraint
 import enum
 from app.models.base import BaseModel
+from app.config.settings import settings
 
 class BookingStatus(str, enum.Enum):
-    PENDING    = "pending"
-    ACCEPTED   = "accepted"
-    CANCELLED  = "cancelled"
-    RESCHEDULED = "rescheduled"
+    PENDING    = "PENDING"
+    ACCEPTED   = "ACCEPTED"
+    CANCELLED  = "CANCELLED"
+    RESCHEDULED = "RESCHEDULED"
 
 class Booking(BaseModel):
-    __tablename__ = "bookings"
+    __tablename__ = "tbl_bookings"
     
     # Cal.com identifiers
     calcom_booking_id  = Column(Integer, nullable=True)
@@ -27,10 +28,10 @@ class Booking(BaseModel):
     event_type_id      = Column(Integer, nullable=False)
     duration_minutes   = Column(Integer, default=30)
     
-    # Status
+    # Status - Use VARCHAR instead of native enum to avoid asyncpg cache issues
     status             = Column(
-        Enum(BookingStatus),
-        default=BookingStatus.PENDING,
+        String(50),
+        default="PENDING",
         nullable=False
     )
     
@@ -41,3 +42,11 @@ class Booking(BaseModel):
     
     # Session tracking
     livekit_session_id = Column(String(255), nullable=True)
+    
+    # Table constraints
+    __table_args__ = (
+        CheckConstraint(
+            f"status IN ('PENDING', 'ACCEPTED', 'CANCELLED', 'RESCHEDULED')",
+            name="check_booking_status"
+        ),
+    )

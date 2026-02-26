@@ -18,7 +18,7 @@ Priority:
 
 """
 
-import logging
+
 from typing import Optional, List
 
 from sqlalchemy import select, desc
@@ -27,7 +27,8 @@ from app.config.database import AsyncSessionLocal
 from app.models.booking import Booking, BookingStatus
 
 
-logger = logging.getLogger(__name__)
+from app.config.logging import app_logger
+logger = app_logger
 
 
 # ═══════════════════════════════════════════

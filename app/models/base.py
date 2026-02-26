@@ -1,10 +1,13 @@
 from sqlalchemy import Column, String, DateTime
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.sql import func
+from app.config.settings import settings
 import uuid
 
 class Base(DeclarativeBase):
-    pass
+    """Base class for all models with configurable schema support"""
+    # Set the schema for all tables
+    __table_args__ = {'schema': settings.DB_SCHEMA}
 
 class BaseModel(Base):
     __abstract__ = True

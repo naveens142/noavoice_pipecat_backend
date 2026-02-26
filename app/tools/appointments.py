@@ -1,6 +1,6 @@
 """
 Cal.com V2 Appointment Tools
-JSON Schema based tools for LLM invocation (LiveKit agents compatible)
+JSON Schema based tools for LLM invocation
 """
 
 import logging
@@ -10,15 +10,11 @@ from typing import Any, Dict
 from app.integrations.calcom.client import calcom_client
 from app.config.database import AsyncSessionLocal
 from app.models.booking import Booking, BookingStatus
-# from app.utils.datetime_helpers import (
-#     parse_natural_datetime,
-#     format_datetime_for_display
-# )
 from app.utils.booking_helpers import validate_or_suggest, validate_cancel, validate_reschedule
 from app.utils.booking_lookup_helpers import get_booking_uid
 from app.utils.datetime_helpers import parse_datetime, normalize_to_utc
-logging.basicConfig(level=logging.INFO) 
-logger = logging.getLogger(__name__)
+from app.config.logging import app_logger
+logger = app_logger
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -133,7 +129,7 @@ async def get_available_slots(
 
 
 async def book_appointment(
-    start: str,
+    datetime_natural: str,
     name: str,
     email: str,
     phone: str = None,
@@ -143,7 +139,7 @@ async def book_appointment(
 ) -> str:
     """Book a new appointment and save to database"""
     try:
-
+        start = datetime_natural
         logger.info(f"Booking request: {start}")
 
         # ✅ STEP 1: parse natural language → ISO UTC
@@ -293,7 +289,7 @@ async def get_booking(
             # Return most recent active booking
             active = [
                 b for b in bookings
-                if b.get("status") in ["accepted", "pending"]
+                if b.get("status") in ["ACCEPTED", "PENDING"]
             ]
             
             if not active:
@@ -323,8 +319,7 @@ async def reschedule_appointment(
     """Reschedule an existing appointment"""
     try:
         # ✅ STEP 1: parse natural language → ISO UTC
-        new_start, time, iso_utc = parse_datetime(start, timezone)
-        start= iso_utc
+        parsed_time, time, iso_utc = parse_datetime(new_start, timezone)
 
         if not iso_utc:
 
@@ -338,16 +333,16 @@ async def reschedule_appointment(
         if not booking_uid:
             return "No upcoming booking found to reschedule."
         
-        logger.info(f"🔄 Rescheduling booking {booking_uid} to {new_start}")
+        logger.info(f"🔄 Rescheduling booking {booking_uid} to {parsed_time}")
 
-        valid, msg = await validate_reschedule(booking_uid, new_start, timezone)
+        valid, msg = await validate_reschedule(booking_uid, parsed_time, timezone)
         if not valid:
             logger.info(f"📅 Rescheduling appointment validation failed for {booking_uid}  reason:{msg}")
             return msg
         
         result = await calcom_client.reschedule_booking(
             booking_uid=booking_uid,
-            new_start=new_start,
+            new_start=iso_utc,
             reason=reason
         )
         
@@ -414,6 +409,10 @@ async def cancel_appointment(
         if not valid:
             logger.info(f"📅  Cancelling appointment validation failed for {booking_uid}  reason:{msg}")
             return msg
+        
+        # Cal.com requires cancellation reason when host is cancelling
+        if not reason:
+            reason = "Cancelled by user"
         
         result = await calcom_client.cancel_booking(
             booking_uid=booking_uid,

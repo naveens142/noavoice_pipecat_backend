@@ -3,7 +3,9 @@ import logging
 from typing import Any, Dict, Optional
 from app.config.settings import settings
 
-logger = logging.getLogger(__name__)
+from app.config.logging import app_logger
+logger = app_logger
+
 
 class CalComV2Client:
     """
