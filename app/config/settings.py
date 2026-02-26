@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     # Neon PostgreSQL
     DATABASE_URL: str
     DB_SCHEMA: str = "noavoice_ns"
+    OPENWEATHER_API_KEY: str = "[FILTERED_OPENWEATHER_KEY]"
     
     class Config:
         env_file = ".env"

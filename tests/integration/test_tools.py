@@ -1,5 +1,5 @@
 import asyncio
-from app.tools.appointments import execute_tool
+from app.tools.tools_dispatcher import execute_tool
 
 
 async def test_all_tools():

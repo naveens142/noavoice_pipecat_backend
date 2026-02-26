@@ -14,66 +14,10 @@ from app.utils.booking_helpers import validate_or_suggest, validate_cancel, vali
 from app.utils.booking_lookup_helpers import get_booking_uid
 from app.utils.datetime_helpers import parse_datetime, normalize_to_utc
 from app.config.logging import app_logger
+from app.tools.tools_schemas import BOOKING_TOOLS_SCHEMA
+
 logger = app_logger
 
-
-# ═══════════════════════════════════════════════════════════════════
-# JSON SCHEMA TOOL DEFINITIONS (for LLM function calling)
-# ═══════════════════════════════════════════════════════════════════
-
-# Update the tool schema for better LLM understanding
-TOOLS_SCHEMA = [
-    {
-        "type": "function",
-        "function": {
-            "name": "book_appointment",
-            "description": """
-                Book a dental appointment for a patient.
-                IMPORTANT: When user says natural language like "tomorrow at 3pm" 
-                or "next monday morning", pass it directly to this function.
-                The function will handle conversion to proper format.
-            """,
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "datetime_natural": {
-                        "type": "string",
-                        "description": """
-                            Natural language date and time from user. Examples:
-                            - "tomorrow at 3pm"
-                            - "next monday morning"
-                            - "august 25 at 2:30pm"
-                            - "friday afternoon"
-                            Do NOT convert this - pass exactly as user said it.
-                        """
-                    },
-                    "name": {
-                        "type": "string",
-                        "description": "Patient's full name"
-                    },
-                    "email": {
-                        "type": "string",
-                        "description": "Patient's email address"
-                    },
-                    "phone": {
-                        "type": "string",
-                        "description": "Patient's phone number with country code"
-                    },
-                    "timezone": {
-                        "type": "string",
-                        "description": "Patient's timezone. Default: 'Asia/Kolkata'",
-                        "default": "Asia/Kolkata"
-                    },
-                    "notes": {
-                        "type": "string",
-                        "description": "Any additional notes"
-                    }
-                },
-                "required": ["datetime_natural", "name", "email"]
-            }
-        }
-    }
-]
 
 # ═══════════════════════════════════════════════════════════════════
 # TOOL IMPLEMENTATIONS
