@@ -8,7 +8,6 @@ from app.config.database import init_db
 from app.handlers.error_handler import register_exception_handlers
 from app.middleware.cors import setup_cors
 from app.middleware.logging import setup_request_logging
-from app.middleware.rate_limit import setup_rate_limiting
 
 
 @asynccontextmanager
@@ -56,11 +55,10 @@ register_exception_handlers(app)
 # Setup middlewares
 setup_cors(app)
 setup_request_logging(app)
-setup_rate_limiting(app)
 
 # Include routers
-# from app.api.v1 import router as v1_router
-# app.include_router(v1_router.router, prefix="/api/v1", tags=["v1"])
+from app.api.v1 import router as v1_router
+app.include_router(v1_router.router)
 
 # Health check endpoint
 @app.get("/health", tags=["health"])
@@ -72,6 +70,13 @@ async def health_check():
         "environment": "production" if not settings.DEBUG else "development"
     }
 
+# Health check endpoint
+@app.get("/")
+async def home():
+    """Home endpoint"""
+    return {
+        "This is Home page"
+    }
 
 if __name__ == "__main__":
     import uvicorn

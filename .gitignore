@@ -76,6 +76,7 @@ myenv/
 docker-compose.override.yml
 
 # Alembic
+alembic.ini
 alembic/versions/*.pyc
 alembic/versions/__pycache__/
 
@@ -109,3 +110,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Frontend test files (not part of backend repo)
+tests/manual/
