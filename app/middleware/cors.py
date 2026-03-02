@@ -12,25 +12,14 @@ def setup_cors(app: FastAPI) -> None:
     """
     if settings.DEBUG:
         # Development: Allow localhost and common dev ports
-        allow_origins = [
-            "http://localhost:3000",
-            "http://localhost:5173",  # Vite default
-            "http://localhost:8080",  # Another common port
-            "http://127.0.0.1:3000",
-            "http://127.0.0.1:5173",
-            "http://127.0.0.1:8080",
-            "*",  # Allow all in dev as fallback
-        ]
+        allow_origins = ["*"]
     else:
         # Production: Restrict to specific origins
-        allow_origins = [
-            "https://noavoice.com",
-            "https://www.noavoice.com",
-        ]
+        allow_origins = ["*"],
     
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=allow_origins,
+        allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

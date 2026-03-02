@@ -250,13 +250,16 @@ async def google_callback(
     # ── Redirect to frontend with tokens ─────────────────────────────────
     # Using URL FRAGMENT (#) — fragment is never sent to server, stays in browser
     # This is safer than query params which appear in server logs
-    frontend_redirect = (
-        f"{settings.FRONTEND_URL}/auth/callback"
-        f"#access_token={access_token}"
-        f"&refresh_token={refresh_token}"
-        f"&token_type=bearer"
-        f"&expires_in={settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60}"
-    )
+    from urllib.parse import urlencode
+
+    params = urlencode({
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    })
+
+    frontend_redirect = f"{settings.FRONTEND_URL}/auth/callback#{params}"
     return RedirectResponse(url=frontend_redirect, status_code=status.HTTP_302_FOUND)
 
 
