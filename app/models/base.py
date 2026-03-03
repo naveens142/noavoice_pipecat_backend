@@ -1,4 +1,5 @@
-from sqlalchemy import Column, String, DateTime
+from sqlalchemy import Column, DateTime
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.sql import func
 from app.config.settings import settings
@@ -13,9 +14,9 @@ class BaseModel(Base):
     __abstract__ = True
     
     id = Column(
-        String(36),
+        UUID(as_uuid=True),
         primary_key=True,
-        default=lambda: str(uuid.uuid4())
+        default=uuid.uuid4
     )
     created_at = Column(
         DateTime(timezone=True),

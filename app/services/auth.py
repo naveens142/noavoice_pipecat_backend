@@ -24,10 +24,11 @@ from app.utils.security import (
     generate_refresh_token, hash_refresh_token,
 )
 from app.config.settings import get_settings
-from app.utils.logger import get_logger
+from app.config.logging import app_logger
+logger = app_logger
 
 settings = get_settings()
-logger = get_logger(__name__)
+
 
 # Brute force config
 MAX_FAILED_ATTEMPTS = 5

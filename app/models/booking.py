@@ -49,4 +49,5 @@ class Booking(BaseModel):
             f"status IN ('PENDING', 'ACCEPTED', 'CANCELLED', 'RESCHEDULED')",
             name="check_booking_status"
         ),
+        {'schema': 'noavoice_ns'},
     )

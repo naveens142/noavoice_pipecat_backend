@@ -2,13 +2,14 @@
 from fastapi import APIRouter
 
 # Import endpoint routers
-from app.api.v1.endpoints import auth
+from app.api.v1.endpoints import auth,agents
 
 # Create main router
 router = APIRouter(prefix="/api/v1")
 
 # Include auth routes
 router.include_router(auth.router)
+router.include_router(agents.router)
 
 # TODO: Include other routes as needed
 # from app.api.v1.endpoints import appointments, livekit, users, webhooks

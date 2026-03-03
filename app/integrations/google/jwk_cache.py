@@ -22,10 +22,10 @@ import time
 import httpx
 from authlib.jose.rfc7517 import KeySet, JsonWebKey
 from app.config.settings import get_settings
-from app.utils.logger import get_logger
+from app.config.logging import app_logger
+logger = app_logger
 
-settings = get_settings()
-logger = get_logger(__name__)
+settings = get_settings() 
 
 # In-memory cache
 _jwk_cache: KeySet | None = None

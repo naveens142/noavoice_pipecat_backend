@@ -12,6 +12,7 @@ from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
+from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -54,6 +55,22 @@ class Settings(BaseSettings):
 
     # ── Frontend ──────────────────────────────────────────────────────────
     FRONTEND_URL: str= "http://localhost:5173"
+
+    # Knowledge Base Configuration
+    KB_UPLOAD_DIR: str = "app/knowledge_base"
+    
+    # Pagination defaults
+    DEFAULT_PAGE_SIZE: int = 20
+    MAX_PAGE_SIZE: int = 100
+    
+    # Agent validation
+    VALID_TIMEZONES: list[str] = [
+        'America/Detroit', 'America/New_York', 'America/Los_Angeles',
+        'America/Chicago', 'Europe/London', 'Europe/Paris',
+        'Asia/Tokyo', 'Asia/Dubai', 'UTC'
+    ]
+    
+    VALID_LANGUAGES: list[str] = ['EN', 'ES', 'FR', 'DE', 'JA', 'ZH']
 
     # ─────────────────────────────────────────────────────────────────────
     # Validators

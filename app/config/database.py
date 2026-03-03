@@ -105,11 +105,18 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     Raises:
         DatabaseConnectionError: If session creation fails
     """
+    from fastapi.exceptions import RequestValidationError
+    from fastapi import HTTPException
+    
     async with AsyncSessionLocal() as session:
         try:
             yield session
             await session.commit()
             db_logger.debug("Database transaction committed")
+        except (RequestValidationError, HTTPException):
+            # Let validation and HTTP errors pass through without wrapping
+            await session.rollback()
+            raise
         except Exception as e:
             await session.rollback()
             db_logger.error(

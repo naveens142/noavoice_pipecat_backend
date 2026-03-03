@@ -29,11 +29,10 @@ from app.utils.redis_client import (
     store_oauth_state, verify_and_consume_state,
     store_nonce, verify_and_consume_nonce,
 )
-from app.utils.logger import get_logger
+from app.config.logging import app_logger
+logger = app_logger
 
 settings = get_settings()
-logger = get_logger(__name__)
-
 
 class GoogleOIDCClient:
     """
