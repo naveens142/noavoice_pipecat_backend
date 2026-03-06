@@ -92,6 +92,10 @@ BOOKING_TOOLS_SCHEMA = [
                         "type": "string",
                         "description": "Additional notes or special requirements (e.g., 'First-time visit', 'Dental anxiety', 'Needs translation')",
                         "maxLength": 500
+                    },
+                    "session_id": {
+                        "type": "string",
+                        "description": "Session ID for tracking LiveKit session context (automatically injected by the system)"
                     }
                 },
                 "required": ["datetime_natural", "name", "email"]

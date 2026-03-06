@@ -51,15 +51,17 @@ async def get_available_slots(
         if not slots_data:
             return f"No available slots found for {date}. Would you like to check another date?"
         
-        # Format slots for LLM to read
+        # Format slots for LLM to read (filter to 30-minute intervals)
         formatted_slots = []
         for date_key, slots in slots_data.items():
             for slot in slots:
                 start_time = slot.get("start", "")
                 # Convert UTC to readable format
                 dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
-                formatted_time = dt.strftime("%I:%M %p")
-                formatted_slots.append(f"• {formatted_time} ({start_time})")
+                # Filter to show only 30-minute intervals (minutes must be :00 or :30)
+                if dt.minute % 30 == 0:
+                    formatted_time = dt.strftime("%I:%M %p")
+                    formatted_slots.append(f"• {formatted_time} ({start_time})")
         
         if not formatted_slots:
             return f"No available slots for {date}. Please try another date."
@@ -199,7 +201,7 @@ async def book_appointment(
 
 
 async def get_booking(
-    email: str = None
+    email: str
 ) -> str:
     """Get booking details by UID or email"""
     try:

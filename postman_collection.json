@@ -1,0 +1,683 @@
+{
+  "info": {
+    "name": "NoaVoice LiveKit Backend API",
+    "description": "Complete API collection for NoaVoice LiveKit Backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"user@example.com\", \"password\": \"SecurePass123!\", \"full_name\": \"John Doe\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Register a new user with email and password"
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"user@example.com\", \"password\": \"SecurePass123!\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login with email and password to get JWT tokens"
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refresh_token\": \"{{refreshToken}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
+            },
+            "description": "Exchange refresh token for new access token"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refresh_token\": \"{{refreshToken}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Logout and revoke refresh token"
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Get current authenticated user information"
+          }
+        },
+        {
+          "name": "Google OAuth Login",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/auth/google",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "google"]
+            },
+            "description": "Start Google OAuth login flow"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agents",
+      "item": [
+        {
+          "name": "Create Agent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Customer Support Agent\", \"description\": \"Handles customer inquiries\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/agents",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents"]
+            },
+            "description": "Create a new agent"
+          }
+        },
+        {
+          "name": "List Agents",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/agents?skip=0&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents"],
+              "query": [
+                {
+                  "key": "skip",
+                  "value": "0",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "Get paginated list of agents"
+          }
+        },
+        {
+          "name": "Search Agents",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/agents/search?q=support",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "support"
+                }
+              ]
+            },
+            "description": "Search agents by name or description"
+          }
+        },
+        {
+          "name": "Get Available Tools",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/agents/tools/available",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents", "tools", "available"]
+            },
+            "description": "Get list of available tools for agents"
+          }
+        },
+        {
+          "name": "List Knowledge Bases",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/agents/knowledge-bases?skip=0&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents", "knowledge-bases"],
+              "query": [
+                {
+                  "key": "skip",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "List user's knowledge bases"
+          }
+        },
+        {
+          "name": "Get Agent Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/agents/{{agentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents", "{{agentId}}"]
+            },
+            "description": "Get complete agent configuration"
+          }
+        },
+        {
+          "name": "Update Agent",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Updated Agent Name\", \"voice\": \"Xb7hH8MSUJpSbSDYk0k2\", \"system_prompt\": \"You are a helpful assistant\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/agents/{{agentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents", "{{agentId}}"]
+            },
+            "description": "Update agent configuration"
+          }
+        },
+        {
+          "name": "Delete Agent",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/agents/{{agentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents", "{{agentId}}"]
+            },
+            "description": "Delete agent (soft delete)"
+          }
+        },
+        {
+          "name": "Add Action to Agent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"tool_id\": \"appointment_booking\", \"custom_name\": \"Schedule Appointment\", \"start_message\": \"Let me help you schedule\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/agents/{{agentId}}/actions",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents", "{{agentId}}", "actions"]
+            },
+            "description": "Add a tool/action to agent"
+          }
+        },
+        {
+          "name": "Update Action Config",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"custom_name\": \"Updated Action Name\", \"start_message\": \"Updated message\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/agents/{{agentId}}/actions/{{actionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents", "{{agentId}}", "actions", "{{actionId}}"]
+            },
+            "description": "Update action configuration"
+          }
+        },
+        {
+          "name": "Remove Action from Agent",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/agents/{{agentId}}/actions/{{actionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents", "{{agentId}}", "actions", "{{actionId}}"]
+            },
+            "description": "Remove action from agent"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Appointments",
+      "item": [
+        {
+          "name": "Create Appointment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"patient_name\": \"John Smith\", \"patient_email\": \"john@example.com\", \"patient_phone\": \"+1-555-0123\", \"start_time\": \"2026-03-15T14:00:00Z\", \"agent_id\": \"550e8400-e29b-41d4-a716-446655440000\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/appointments",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments"]
+            },
+            "description": "Create a new appointment"
+          }
+        },
+        {
+          "name": "List Appointments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments?skip=0&limit=20&status=PENDING",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments"],
+              "query": [
+                {
+                  "key": "skip",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "status",
+                  "value": "PENDING"
+                }
+              ]
+            },
+            "description": "Get paginated list of appointments"
+          }
+        },
+        {
+          "name": "Search Appointments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/search?q=john&skip=0&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "john"
+                },
+                {
+                  "key": "skip",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Search appointments by patient name or email"
+          }
+        },
+        {
+          "name": "Get Appointments by Email",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/email/john@example.com?skip=0&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "email", "john@example.com"],
+              "query": [
+                {
+                  "key": "skip",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get appointments by patient email"
+          }
+        },
+        {
+          "name": "Get Appointment Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "stats"]
+            },
+            "description": "Get appointment statistics"
+          }
+        },
+        {
+          "name": "Get Appointment Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{appointmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "{{appointmentId}}"]
+            },
+            "description": "Get appointment details"
+          }
+        },
+        {
+          "name": "Update Appointment",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"patient_name\": \"John Updated\", \"notes\": \"Updated notes\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{appointmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "{{appointmentId}}"]
+            },
+            "description": "Update appointment"
+          }
+        },
+        {
+          "name": "Cancel Appointment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"cancellation_reason\": \"Patient requested cancellation\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{appointmentId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "{{appointmentId}}", "cancel"]
+            },
+            "description": "Cancel an appointment"
+          }
+        },
+        {
+          "name": "Reschedule Appointment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"start_time\": \"2026-03-18T10:00:00Z\", \"rescheduling_reason\": \"Patient requested new time\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{appointmentId}}/reschedule",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "{{appointmentId}}", "reschedule"]
+            },
+            "description": "Reschedule an appointment"
+          }
+        },
+        {
+          "name": "Delete Appointment",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{appointmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "{{appointmentId}}"]
+            },
+            "description": "Delete appointment (admin only)"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "agentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "appointmentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "actionId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
