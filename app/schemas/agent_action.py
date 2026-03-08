@@ -14,9 +14,11 @@ class CreateAgentActionRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "tool_id": "booking_tool_uuid",
-                "custom_name": "Book Appointment",
-                "start_message": "Let me book that for you..."
+                "tool_id": "appointment-booking-tool-uuid",
+                "custom_name": "Schedule an Appointment",
+                "start_message": "I can help you schedule an appointment. Let me find some available slots.",
+                "complete_message": "Your appointment has been successfully scheduled!",
+                "failed_message": "I'm sorry, but I wasn't able to complete that booking."
             }
         }
 

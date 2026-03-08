@@ -7,10 +7,11 @@ Validation runs at startup — app fails fast if required vars are missing.
 Generate SECRET_KEY with:
     python -c "import secrets; print(secrets.token_hex(64))"
 """
+import os
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, field_validator, model_validator, computed_field
 from pydantic_settings import BaseSettings
 from pathlib import Path
 
@@ -56,8 +57,15 @@ class Settings(BaseSettings):
     # ── Frontend ──────────────────────────────────────────────────────────
     FRONTEND_URL: str= "http://localhost:5173"
 
-    # Knowledge Base Configuration
-    KB_UPLOAD_DIR: str = "app/knowledge_base"
+    # Knowledge Base Configuration - Absolute path based on actual file location
+    @computed_field  # type: ignore[misc]
+    @property
+    def kb_upload_dir(self) -> str:
+        """Calculate absolute path for KB uploads based on settings file location."""
+        settings_dir = os.path.dirname(os.path.abspath(__file__))  # /path/to/app/config
+        project_root = os.path.dirname(os.path.dirname(settings_dir))  # /path/to/project
+        kb_dir = os.path.join(project_root, 'app', 'knowledge_base')
+        return kb_dir
     
     # Pagination defaults
     DEFAULT_PAGE_SIZE: int = 20

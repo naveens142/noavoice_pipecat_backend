@@ -12,8 +12,8 @@ class CreateAgentRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "name": "Agent Vinod",
-                "description": "Healthcare receptionist agent"
+                "name": "Customer Support Agent",
+                "description": "AI-powered agent to handle customer inquiries and support tickets"
             }
         }
 
@@ -40,11 +40,21 @@ class UpdateAgentRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
+                "name": "Updated Customer Support Agent",
+                "description": "Enhanced customer support with AI capabilities",
                 "voice": "Xb7hH8MSUJpSbSDYk0k2",
-                "system_prompt": "You are Maya, a warm receptionist...",
-                "first_message": "Hello, this is Maya from NoaVoice Health Centre. How may I assist you today?",
                 "language": "EN",
-                "timezone": "America/Detroit"
+                "timezone": "America/New_York",
+                "system_prompt": "You are Maya, a warm and professional customer support representative. Be helpful, polite, and always aim to resolve customer issues quickly.",
+                "first_message": "Hello! Thank you for calling. My name is Maya. How can I help you today?",
+                "end_call_message": "Thank you for calling! Have a wonderful day!",
+                "voicemail_message": "Thank you for calling. Please leave your name and number, and we'll get back to you shortly.",
+                "first_message_mode": "assistant-speaks-first",
+                "end_call_function_enabled": True,
+                "recording_enabled": True,
+                "detect_caller_number": True,
+                "multi_lingual_enabled": False,
+                "is_active": True
             }
         }
 

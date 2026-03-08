@@ -24,6 +24,7 @@ UploadKnowledgeBaseRequest,
 KnowledgeBaseResponse,
 AssignKnowledgeBaseRequest,
 )
+from app.services.knowledge_base_service_async import KnowledgeBaseServiceAsync
 router = APIRouter(
 prefix="/agents",
 tags=["Agents"],
@@ -138,12 +139,12 @@ async def list_knowledge_bases(
     """
     Get paginated list of user's knowledge bases.
     """
-    return {
-        "items": [],
-        "total": 0,
-        "skip": skip,
-        "limit": limit
-    }
+    service = KnowledgeBaseServiceAsync(db)
+    return await service.list_user_knowledge_bases(
+        user_id=normalize_uuid(current_user.id),
+        skip=skip,
+        limit=limit
+    )
 
 @router.get(
 "/{agent_id}",
@@ -314,6 +315,45 @@ current_user: User = Depends(get_current_user)
 
 
 # ==================== KNOWLEDGE BASE ENDPOINTS ====================
+
+@router.get(
+"/knowledge-bases",
+response_model=dict,
+summary="List user's knowledge bases",
+description="Get user's uploaded knowledge bases with pagination"
+)
+async def list_user_knowledge_bases(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(20, ge=1, le=100, description="Number of records to return"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> dict:
+    """
+    Get paginated list of user's knowledge bases.
+    - **skip**: Pagination offset (default: 0)
+    - **limit**: Page size (default: 20, max: 100)
+    """
+    service = KnowledgeBaseServiceAsync(db)
+    return await service.list_user_knowledge_bases(str(current_user.id), skip, limit)
+
+
+@router.get(
+"/{agent_id}/knowledge-bases",
+response_model=list,
+summary="Get agent's knowledge bases",
+description="Get all knowledge bases assigned to an agent"
+)
+async def get_agent_knowledge_bases(
+    agent_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> list:
+    """
+    Get all knowledge bases assigned to the agent.
+    Includes full knowledge base details for each assignment.
+    """
+    service = KnowledgeBaseServiceAsync(db)
+    return await service.get_agent_knowledge_bases(agent_id, str(current_user.id))
 @router.post(
 "/knowledge-bases/upload",
 response_model=dict,
@@ -337,11 +377,8 @@ current_user: User = Depends(get_current_user)
     Returns 413 if file too large.
     Returns 400 if file type not allowed.
     """
-    # TODO: Create async version of KnowledgeBaseService
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Knowledge base upload not yet implemented"
-    )
+    service = KnowledgeBaseServiceAsync(db)
+    return await service.upload_knowledge_base(file, document_name, str(current_user.id))
 
 @router.post(
 "/{agent_id}/knowledge-bases",
@@ -363,11 +400,29 @@ current_user: User = Depends(get_current_user)
     Returns 400 if KB already assigned.
     Returns 404 if KB not found or agent not found.
     """
-    # TODO: Create async version of KnowledgeBaseService
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Assign knowledge base not yet implemented"
-    )
+    service = KnowledgeBaseServiceAsync(db)
+    return await service.assign_kb_to_agent(agent_id, request.knowledge_base_id, str(current_user.id))
+
+
+@router.patch(
+"/{agent_id}/knowledge-bases/{kb_id}",
+response_model=dict,
+summary="Update knowledge base assignment",
+description="Update knowledge base assignment status (enable/disable)"
+)
+async def update_knowledge_base_assignment(
+    agent_id: str,
+    kb_id: str,
+    is_enabled: bool = Query(..., description="Enable or disable this knowledge base for the agent"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> dict:
+    """
+    Update knowledge base assignment status.
+    - **is_enabled** (required): Whether to enable or disable this KB for the agent
+    """
+    service = KnowledgeBaseServiceAsync(db)
+    return await service.update_kb_assignment(agent_id, kb_id, str(current_user.id), is_enabled)
 
 @router.delete(
 "/{agent_id}/knowledge-bases/{kb_id}",
@@ -385,11 +440,8 @@ current_user: User = Depends(get_current_user)
     Remove knowledge base from agent.
     The KB itself is not deleted, just the assignment.
     """
-    # TODO: Create async version of KnowledgeBaseService
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Remove knowledge base not yet implemented"
-    )
+    service = KnowledgeBaseServiceAsync(db)
+    await service.remove_kb_from_agent(agent_id, kb_id, str(current_user.id))
 
 @router.delete(
 "/knowledge-bases/{kb_id}",
@@ -404,10 +456,7 @@ current_user: User = Depends(get_current_user)
 ) -> None:
     """
     Delete knowledge base document.
-    User must own the KB.
+    User must own the KB. This is a soft delete.
     """
-    # TODO: Implement knowledge base deletion
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Delete knowledge base not yet implemented"
-    )
+    service = KnowledgeBaseServiceAsync(db)
+    await service.delete_knowledge_base(kb_id, str(current_user.id))

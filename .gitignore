@@ -113,3 +113,7 @@ dmypy.json
 
 # Frontend test files (not part of backend repo)
 tests/manual/
+
+.pdf
+.docx
+.md

@@ -106,6 +106,32 @@ async def login(
 
 # ─── Token Refresh ────────────────────────────────────────────────────────────
 
+async def _refresh_token_impl(
+    request: Request,
+    payload: RefreshTokenRequest,
+    db: AsyncSession,
+):
+    """
+    Internal implementation for token refresh.
+    Used by both /refresh and /refresh-token endpoints.
+    """
+    try:
+        access_token, new_refresh = await AuthService.refresh_tokens(
+            db=db,
+            raw_refresh_token=payload.refresh_token,
+            user_agent=request.headers.get("User-Agent"),
+            ip_address=request.client.host if request.client else None,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=new_refresh,
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
+
+
 @router.post(
     "/refresh",
     response_model=TokenResponse,
@@ -123,21 +149,29 @@ async def refresh_token(
     OLD refresh token is immediately invalidated (rotation).
     If a stolen/reused token is detected, ALL sessions are revoked.
     """
-    try:
-        access_token, new_refresh = await AuthService.refresh_tokens(
-            db=db,
-            raw_refresh_token=payload.refresh_token,
-            user_agent=request.headers.get("User-Agent"),
-            ip_address=request.client.host if request.client else None,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+    return await _refresh_token_impl(request, payload, db)
 
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=new_refresh,
-        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-    )
+
+@router.post(
+    "/refresh-token",
+    response_model=TokenResponse,
+    summary="Refresh access token (alias endpoint)",
+)
+@limiter.limit("10/minute")
+async def refresh_token_alias(
+    request: Request,
+    payload: RefreshTokenRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Exchange a refresh token for new access + refresh tokens.
+    
+    This is an alias for /refresh endpoint for backwards compatibility.
+
+    OLD refresh token is immediately invalidated (rotation).
+    If a stolen/reused token is detected, ALL sessions are revoked.
+    """
+    return await _refresh_token_impl(request, payload, db)
 
 
 # ─── Logout ───────────────────────────────────────────────────────────────────
