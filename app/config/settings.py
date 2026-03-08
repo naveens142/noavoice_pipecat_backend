@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     # ── Frontend ──────────────────────────────────────────────────────────
     FRONTEND_URL: str= "http://localhost:5173"
 
+    # -----------Pipecat Agent-----------------------------------------------------
+    AGENT_BASE_URL: str = "http://localhost:7860"
+
     # Knowledge Base Configuration - Absolute path based on actual file location
     @computed_field  # type: ignore[misc]
     @property
