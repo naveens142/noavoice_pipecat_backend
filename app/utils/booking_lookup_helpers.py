@@ -123,6 +123,27 @@ async def get_booking_uid(
 ) -> Optional[str]:
     email = email.strip().lower()
 
+    # Log all bookings for diagnostics
+    try:
+        async with AsyncSessionLocal() as db:
+            from sqlalchemy import select
+            all_stmt = select(Booking).where(
+                Booking.patient_email == email
+            ).order_by(Booking.start_time.desc())
+            all_result = await db.execute(all_stmt)
+            all_bookings = all_result.scalars().all()
+            
+            if all_bookings:
+                logger.info(f"📋 All {len(all_bookings)} booking(s) for {email}:")
+                for idx, b in enumerate(all_bookings, 1):
+                    logger.info(
+                        f"   [{idx}] UID: {b.calcom_booking_uid} | "
+                        f"Start: {b.start_time} | Status: {b.status}"
+                    )
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to list bookings: {e}")
+
+    # Get the active booking
     booking = await find_booking(
         email=email,
         phone=phone,
@@ -130,10 +151,14 @@ async def get_booking_uid(
     )
 
     if booking:
-
+        logger.info(
+            f"✅ Selected for cancel: UID={booking.calcom_booking_uid} "
+            f"Status={booking.status} Start={booking.start_time.strftime('%Y-%m-%d %H:%M')}"
+        )
         return booking.calcom_booking_uid
-
-    return None
+    else:
+        logger.warning(f"⚠️ No active booking found for {email}")
+        return None
 
 
 # ═══════════════════════════════════════════

@@ -301,25 +301,107 @@ async def reschedule_appointment(
         data = result.get("data", {})
         new_start_time = data.get("start", new_start)
         
-        # Update database
+        # 🔑 CRITICAL: Extract the NEW booking UID from Cal.com's reschedule response
+        # Cal.com returns rescheduledToUid which is the NEW booking UID
+        new_booking_uid = data.get("rescheduledToUid") or data.get("uid")
+        
+        if not new_booking_uid:
+            logger.error(f"❌ Cal.com response missing new booking UID. Response: {data}")
+            # If we can't get new UID, at least log the issue
+            new_booking_uid = booking_uid
+        else:
+            logger.info(f"✅ Got new booking UID from reschedule: {new_booking_uid}")
+        
+        # 🔑 CRITICAL: Update database with NEW booking UID
+        # This ensures cancel operations use the correct UID
+        update_successful = False
         try:
             async with AsyncSessionLocal() as db:
-                from sqlalchemy import select
+                from sqlalchemy import select, update, text
+                
+                # First, try to find by old UID
                 stmt = select(Booking).where(
                     Booking.calcom_booking_uid == booking_uid
                 )
                 result_db = await db.execute(stmt)
                 booking = result_db.scalar_one_or_none()
                 
+                if not booking:
+                    # If not found by UID, search by email + patient info (fallback)
+                    logger.warning(f"⚠️ Booking not found by UID {booking_uid}, searching by email {email}")
+                    stmt = select(Booking).where(
+                        Booking.patient_email == email,
+                        Booking.status.in_([BookingStatus.ACCEPTED, BookingStatus.PENDING, BookingStatus.RESCHEDULED])
+                    ).order_by(Booking.start_time.desc())
+                    result_db = await db.execute(stmt)
+                    booking = result_db.scalars().first()
+                
                 if booking:
                     dt = datetime.fromisoformat(new_start_time.replace("Z", "+00:00"))
-                    booking.start_time         = dt
-                    booking.status             = BookingStatus.RESCHEDULED
-                    booking.rescheduling_reason = reason
+                    old_uid = booking.calcom_booking_uid
+                    old_start = booking.start_time
+                    booking_id = booking.id
+                    
+                    logger.info(f"🔍 Found booking to update: ID={booking_id}, old_uid={old_uid}")
+                    
+                    # 🔑 Use raw SQL UPDATE for maximum reliability and control
+                    raw_update = text("""
+                        UPDATE tbl_bookings 
+                        SET calcom_booking_uid = :new_uid,
+                            start_time = :new_start,
+                            status = :new_status,
+                            rescheduling_reason = :reason
+                        WHERE id = :booking_id
+                    """)
+                    
+                    result = await db.execute(raw_update, {
+                        'new_uid': new_booking_uid,
+                        'new_start': dt,
+                        'new_status': BookingStatus.RESCHEDULED,
+                        'reason': reason,
+                        'booking_id': booking_id
+                    })
+                    logger.info(f"🔄 Raw SQL UPDATE executed: {result.rowcount} row(s) affected")
+                    
+                    # Flush and commit
+                    await db.flush()
                     await db.commit()
-                    logger.info(f"✅ Booking updated in DB: {booking_uid}")
+                    logger.info(f"✅ Database commit completed - waiting for verification")
+                    
+                    # Critical: Use a completely new session for verification
+                    # This ensures we read from the database, not the session cache
+                    await db.close()
+                    
+                    # New session for verification
+                    async with AsyncSessionLocal() as verify_db:
+                        verify_stmt = select(Booking).where(Booking.id == booking_id)
+                        verify_result = await verify_db.execute(verify_stmt)
+                        updated_booking = verify_result.scalar_one_or_none()
+                        
+                        if updated_booking and updated_booking.calcom_booking_uid == new_booking_uid:
+                            logger.info(
+                                f"✅ Booking VERIFIED updated in DB:\n"
+                                f"   Booking ID: {booking_id}\n"
+                                f"   Old UID: {old_uid} @ {old_start}\n"
+                                f"   New UID: {updated_booking.calcom_booking_uid} @ {updated_booking.start_time}\n"
+                                f"   Status: {updated_booking.status}"
+                            )
+                            update_successful = True
+                        else:
+                            actual_uid = updated_booking.calcom_booking_uid if updated_booking else "NOT FOUND"
+                            actual_status = updated_booking.status if updated_booking else "N/A"
+                            logger.error(
+                                f"❌ VERIFICATION FAILED:\n"
+                                f"   Booking ID: {booking_id}\n"
+                                f"   Expected UID: {new_booking_uid}\n"
+                                f"   Actual UID: {actual_uid}\n"
+                                f"   Status: {actual_status}\n"
+                                f"   This means the raw SQL UPDATE didn't work!"
+                            )
+                else:
+                    logger.error(f"❌ Booking not found for email {email} or UID {booking_uid}")
         except Exception as db_err:
-            logger.warning(f"⚠️ Failed to update DB: {db_err}")
+            logger.error(f"❌ Database update exception: {db_err}", exc_info=True)
         
         # Format response
         dt = datetime.fromisoformat(new_start_time.replace("Z", "+00:00"))
@@ -329,7 +411,7 @@ async def reschedule_appointment(
             f"Your appointment has been successfully rescheduled! ✅\n\n"
             f"📋 New Details:\n"
             f"• New Date & Time: {formatted_time}\n"
-            f"• Booking ID: {booking_uid}\n\n"
+            f"• Booking ID: {new_booking_uid}\n\n"
             f"A confirmation email will be sent to you. "
             f"Is there anything else I can help you with?"
         )
@@ -351,24 +433,30 @@ async def cancel_appointment(
         if not booking_uid:
             return "No upcoming booking found to cancel."
         
-        logger.info(f"❌ Cancelling booking: {booking_uid}")
+        logger.info(f"❌ Attempting to cancel booking: {booking_uid}")
 
         valid, msg = await validate_cancel(booking_uid)
         if not valid:
-            logger.info(f"📅  Cancelling appointment validation failed for {booking_uid}  reason:{msg}")
+            logger.info(f"📅 Cancelling appointment validation failed for {booking_uid}: {msg}")
             return msg
+        
+        logger.info(f"✅ Booking validation passed, proceeding with cancellation")
         
         # Cal.com requires cancellation reason when host is cancelling
         if not reason:
             reason = "Cancelled by user"
         
+        logger.info(f"📞 Calling Cal.com API to cancel: {booking_uid}")
         result = await calcom_client.cancel_booking(
             booking_uid=booking_uid,
             reason=reason
         )
         
+        logger.info(f"📞 Cal.com responded with status: {result.get('status')}")
+        
         if result.get("status") != "success":
             error_msg = result.get("error", {}).get("message", "Unknown error")
+            logger.error(f"❌ Cal.com rejection: {error_msg}")
             return f"Sorry, I couldn't cancel: {error_msg}"
         
         # Update database
@@ -386,6 +474,8 @@ async def cancel_appointment(
                     booking.cancellation_reason = reason
                     await db.commit()
                     logger.info(f"✅ Booking cancelled in DB: {booking_uid}")
+                else:
+                    logger.warning(f"⚠️ Booking not found in DB for UID: {booking_uid}")
         except Exception as db_err:
             logger.warning(f"⚠️ Failed to update DB: {db_err}")
         
@@ -399,8 +489,35 @@ async def cancel_appointment(
         )
         
     except Exception as e:
-        logger.error(f"❌ Error cancelling: {e}", exc_info=True)
-        return f"Sorry, I couldn't cancel the appointment. Error: {str(e)}"
+        logger.error(f"❌ Error during cancel operation: {e}", exc_info=True)
+        
+        # Extract meaningful error message from Cal.com
+        error_msg = str(e)
+        if "already been cancelled" in error_msg or "already cancelled" in error_msg.lower():
+            return (
+                f"❌ This appointment is already cancelled.\n\n"
+                f"The booking has already been cancelled (likely during a reschedule operation).\n"
+                f"If you need to extend or rebook, please create a new appointment."
+            )
+        elif "Bad Request" in error_msg or "400" in error_msg:
+            # Try to extract the original Cal.com error message
+            try:
+                import json
+                if "Cal.com API error" in error_msg:
+                    # Parse the error to extract useful info
+                    if "{" in error_msg:
+                        json_start = error_msg.rfind("{")
+                        json_end = error_msg.rfind("}") + 1
+                        if json_start >= 0 and json_end > json_start:
+                            error_data = json.loads(error_msg[json_start:json_end])
+                            cal_error = error_data.get("error", {}).get("message", error_msg)
+                            logger.error(f"Cal.com error details: {cal_error}")
+                            return f"❌ Cannot cancel this appointment: {cal_error}"
+            except Exception as parse_error:
+                logger.warning(f"⚠️ Failed to parse Cal.com error details: {parse_error}")
+            return f"❌ Invalid request to cancel appointment. Please verify the booking details."
+        
+        return f"❌ Unexpected error cancelling appointment: {error_msg}"
 
 
 # ═══════════════════════════════════════════════════════════════════
