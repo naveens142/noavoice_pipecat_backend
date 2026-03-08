@@ -16,7 +16,7 @@ class AgentKnowledgeBase(BaseModel):
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     
-    knowledge_base: Mapped['KnowledgeBase'] = relationship('KnowledgeBase')
+    knowledge_base: Mapped['KnowledgeBase'] = relationship('KnowledgeBase', overlaps='agent_knowledge_bases')
     
     __table_args__ = (
         Index('idx_agent_kb_agent_id', 'agent_id'),

@@ -1,8 +1,11 @@
 import asyncio
+from datetime import datetime
 from app.tools.tools_dispatcher import execute_tool
 
 
 async def test_all_tools():
+    # Generate unique email for each test run to avoid multiple bookings conflict
+    test_email = f"test_westack+1772950136@gmail.com"
 
     print("\n" + "="*50)
     print("1️⃣ Testing get_available_slots...")
@@ -11,7 +14,7 @@ async def test_all_tools():
     result = await execute_tool(
         "get_available_slots",
         {
-            "date": "2026-03-04",
+            "date": "2026-03-11",
             "timezone": "Asia/Kolkata"
         }
     )
@@ -29,11 +32,11 @@ async def test_all_tools():
         {
 
             # ✅ CHANGED HERE
-            "datetime_natural": "4th march at 11am",
+            "datetime_natural": "11h march at 11am",
 
-            "name": "Naveen Sharma",
+            "name": "Mohit rana",
 
-            "email": "test_westack@gmail.com",
+            "email": test_email,
 
             "phone": "+919876543210",
 
@@ -52,7 +55,7 @@ async def test_all_tools():
     result = await execute_tool(
         "get_booking",
         {
-            "email": "test_westack@gmail.com"
+            "email": test_email
         }
     )
 
@@ -69,9 +72,9 @@ async def test_all_tools():
         {
 
             # only email needed now
-            "email": "test_westack@gmail.com",
+            "email": test_email,
 
-            "new_start": "4th march at 12PM"
+            "new_start": "15th march at 1PM"
         }
     )
 
@@ -86,7 +89,7 @@ async def test_all_tools():
     result = await execute_tool(
         "cancel_appointment",
         {
-            "email": "test_westack@gmail.com"
+            "email": test_email
         }
     )
 

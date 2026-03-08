@@ -10,7 +10,7 @@ from typing import Any, Dict
 from app.integrations.calcom.client import calcom_client
 from app.config.database import AsyncSessionLocal
 from app.models.booking import Booking, BookingStatus
-from app.utils.booking_helpers import validate_or_suggest, validate_cancel, validate_reschedule
+from app.utils.booking_helpers import validate_or_suggest, validate_cancel, validate_reschedule,validate_booking
 from app.utils.booking_lookup_helpers import get_booking_uid
 from app.utils.datetime_helpers import parse_datetime, normalize_to_utc
 from app.config.logging import app_logger
@@ -33,22 +33,27 @@ async def get_available_slots(
         
         # Add one day for end date
         start_date = date
-        end_date = (
-            datetime.strptime(date, "%Y-%m-%d") + timedelta(days=1)
-        ).strftime("%Y-%m-%d")
+        # end_date = (
+        #     datetime.strptime(date, "%Y-%m-%d") + timedelta(days=1)
+        # ).strftime("%Y-%m-%d")
         
+        logger.info(f"🗓️ get_available_slots method start date: {start_date}")
         result = await calcom_client.get_available_slots(
             start_date=start_date,
-            end_date=end_date,
+            end_date=start_date,
             timezone=timezone
         )
         
+        logger.info(f"🗓️ get_available_slots calcom results: {result}")
+                    
         if result.get("status") != "success":
+            logger.info(f"Sorry, I couldn't fetch available slots. Please try again.")
             return "Sorry, I couldn't fetch available slots. Please try again."
         
         slots_data = result.get("data", {})
         
         if not slots_data:
+            logger.info(f"No available slots found for {date}. Would you like to check another date?")
             return f"No available slots found for {date}. Would you like to check another date?"
         
         # Format slots for LLM to read (filter to 30-minute intervals)
@@ -64,9 +69,11 @@ async def get_available_slots(
                     formatted_slots.append(f"• {formatted_time} ({start_time})")
         
         if not formatted_slots:
+            logger.info(f"No available slots for {date}. Please try another date")
             return f"No available slots for {date}. Please try another date."
         
         slots_list = "\n".join(formatted_slots[:10])  # Show max 10 slots
+        logger.info(f"Available slots for {date}:\n{slots_list}\n\nWhich time works best for you?")
         return f"Available slots for {date}:\n{slots_list}\n\nWhich time works best for you?"
         
     except Exception as e:
@@ -104,21 +111,16 @@ async def book_appointment(
         name=name.strip().lower()
         logger.info(f"📅 Booking appointment for {name} ({email}) at {start}")
 
-        # validate booking
-        valid, slot, message = await validate_or_suggest(start,timezone)
-
+        # validate booking 
+        valid, msg  = await validate_booking(start,timezone)
         if not valid:
-            logger.info(f"📅 Booking appointment validation failed for {name} suggested_slot {slot} reason:{message}")
+            logger.info(f"📅 Booking appointment validation failed for {name} reason: {msg}")
             return {
 
-                "status": "failed",
-
-                "message": message,
-
-                "suggested_slot": slot
-
+                "status": "failed"
             }
                 
+        logger.info(f"📅 create_booking {name} ({email}) at {start}")
         # Call Cal.com V2 API
         result = await calcom_client.create_booking(
             start=start,
@@ -281,7 +283,7 @@ async def reschedule_appointment(
         
         logger.info(f"🔄 Rescheduling booking {booking_uid} to {parsed_time}")
 
-        valid, msg = await validate_reschedule(booking_uid, parsed_time, timezone)
+        valid, msg = await validate_reschedule(booking_uid, iso_utc, timezone)
         if not valid:
             logger.info(f"📅 Rescheduling appointment validation failed for {booking_uid}  reason:{msg}")
             return msg

@@ -102,11 +102,12 @@ async def find_booking(
 
         query = query.order_by(desc(Booking.start_time))
 
-
+        logger.info(f"DB Query for find_booking: {query}")
         result = await db.execute(query)
 
         booking = result.scalar_one_or_none()
 
+        logger.info(f"DB response for find_booking: {booking}")
 
         return booking
 
@@ -121,6 +122,7 @@ async def get_booking_uid(
     session_id=None
 ) -> Optional[str]:
     email = email.strip().lower()
+
     booking = await find_booking(
         email=email,
         phone=phone,

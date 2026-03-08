@@ -89,6 +89,7 @@ class CalComV2Client:
             "timeZone": timezone
         }
         
+        logger.info(f"🗓️ get_available_slots payload: {params} ")
         # Slots endpoint uses different API version
         async with httpx.AsyncClient(timeout=30.0) as client:
             headers = {**self.headers, "cal-api-version": "2024-09-04"}
