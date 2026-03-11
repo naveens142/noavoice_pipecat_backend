@@ -1,4 +1,4 @@
-`"""
+"""
 Application settings — single source of truth for all configuration.
 
 All sensitive values come from environment variables / .env file.
