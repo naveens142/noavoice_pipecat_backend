@@ -3,11 +3,11 @@ services:
     name: noavoice-livekit-backend
     env: python
     plan: standard
-    
+
     # Build and Deploy Commands
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn --worker-class uvicorn.workers.UvicornWorker --workers 2 --timeout 120 --bind 0.0.0.0:$PORT main:app
-    
+
     # Environment Variables
     envVars:
       - key: ENVIRONMENT
@@ -16,15 +16,9 @@ services:
         value: "False"
       - key: PYTHON_VERSION
         value: 3.11.0
-    
+
     # Health Check
     healthCheckPath: /health
-    
+
     # Auto Deploy from Git
     autoDeploy: true
-
-# PostgreSQL Database (if needed)
-# databases:
-#   - name: noavoice-db
-#     plan: standard
-#     ipAllowList: []

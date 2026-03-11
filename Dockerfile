@@ -23,6 +23,7 @@ WORKDIR /app
 # Install runtime dependencies only
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python dependencies from builder
@@ -40,12 +41,12 @@ RUN mkdir -p logs && chmod 755 logs
 # Create knowledge_base directory
 RUN mkdir -p app/knowledge_base && chmod 755 app/knowledge_base
 
-# Health check
+# Health check — shell form so $PORT expands correctly
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:${PORT:-8000}/health', timeout=5)"
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Expose port (Render will override PORT env var)
+# Expose default port
 EXPOSE 8000
 
-# Run application with gunicorn for production
-CMD ["gunicorn", "--worker-class", "uvicorn.workers.UvicornWorker", "--workers", "2", "--timeout", "120", "--bind", "0.0.0.0:${PORT:-8000}", "main:app"]
+# IMPORTANT: Use shell form (not exec/JSON array form) so $PORT expands correctly
+CMD gunicorn --worker-class uvicorn.workers.UvicornWorker --workers 2 --timeout 120 --bind 0.0.0.0:${PORT:-8000} main:app
