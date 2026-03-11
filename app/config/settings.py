@@ -1,4 +1,4 @@
-"""
+`"""
 Application settings — single source of truth for all configuration.
 
 All sensitive values come from environment variables / .env file.
@@ -37,7 +37,6 @@ class Settings(BaseSettings):
     OPENWEATHER_API_KEY: str
 
     # ── Security / JWT ────────────────────────────────────────────────────
-    # Generate with: python -c "import secrets; print(secrets.token_hex(64))"
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
@@ -47,65 +46,64 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str
-
-    # Standard Google OIDC discovery URL — never changes
     GOOGLE_DISCOVERY_URL: str = "https://accounts.google.com/.well-known/openid-configuration"
 
-    # ── Redis (CSRF state + nonce storage) ────────────────────────────────
-    REDIS_URL:str
+    # ── Redis ─────────────────────────────────────────────────────────────
+    REDIS_URL: str
 
     # ── Frontend ──────────────────────────────────────────────────────────
-    FRONTEND_URL: str= "http://localhost:5173"
+    FRONTEND_URL: str = "http://localhost:5173"
 
-    # -----------Pipecat Agent-----------------------------------------------------
+    # ── Pipecat Agent ─────────────────────────────────────────────────────
     AGENT_BASE_URL: str = "http://localhost:7860"
 
-    # TWILIO
+    # ── Twilio ────────────────────────────────────────────────────────────
     TWILIO_ACCOUNT_SID: str
     TWILIO_AUTH_TOKEN: str
-    TWILIO_PHONE_NUMBER: str 
+    TWILIO_PHONE_NUMBER: str
 
-    # Your public URL (use ngrok for local dev)
+    # ── Public URL ────────────────────────────────────────────────────────
     BASE_URL: str = "https://incretory-unerodable-tiffani.ngrok-free.dev"
 
-    # Knowledge Base Configuration - Absolute path based on actual file location
+    # ── Knowledge Base ────────────────────────────────────────────────────
     @computed_field  # type: ignore[misc]
     @property
     def kb_upload_dir(self) -> str:
-        """Calculate absolute path for KB uploads based on settings file location."""
-        settings_dir = os.path.dirname(os.path.abspath(__file__))  # /path/to/app/config
-        project_root = os.path.dirname(os.path.dirname(settings_dir))  # /path/to/project
+        settings_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(os.path.dirname(settings_dir))
         kb_dir = os.path.join(project_root, 'app', 'knowledge_base')
-        # Fallback to /tmp for production (Render)
         if not os.path.exists(kb_dir) and self.ENVIRONMENT == "production":
             kb_dir = "/tmp/knowledge_base"
             os.makedirs(kb_dir, exist_ok=True)
         return kb_dir
-    
-    # Pagination defaults
+
+    # ── Pagination ────────────────────────────────────────────────────────
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
-    
-    # Agent validation
+
+    # ── Agent validation ──────────────────────────────────────────────────
     VALID_TIMEZONES: list[str] = [
         'America/Detroit', 'America/New_York', 'America/Los_Angeles',
         'America/Chicago', 'Europe/London', 'Europe/Paris',
         'Asia/Tokyo', 'Asia/Dubai', 'UTC'
     ]
-    
     VALID_LANGUAGES: list[str] = ['EN', 'ES', 'FR', 'DE', 'JA', 'ZH']
 
     # ─────────────────────────────────────────────────────────────────────
     # Validators
     # ─────────────────────────────────────────────────────────────────────
 
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def parse_debug_string(cls, v) -> bool:
+        """Convert string env var 'false'/'true' to proper Python bool."""
+        if isinstance(v, str):
+            return v.lower() in ("true", "1", "yes")
+        return v
+
     @field_validator("SECRET_KEY")
     @classmethod
     def validate_secret_key(cls, v: str) -> str:
-        """
-        Enforce minimum entropy — 64 chars = 256 bits minimum.
-        App refuses to start with a weak secret key.
-        """
         if len(v) < 64:
             raise ValueError(
                 "SECRET_KEY must be at least 64 characters. "
@@ -117,11 +115,11 @@ class Settings(BaseSettings):
     def validate_production_settings(self) -> "Settings":
         """Stricter checks when running in production."""
         if self.ENVIRONMENT == "production":
-            if self.DEBUG:
+            if self.DEBUG is True:
                 raise ValueError("DEBUG must be False in production")
-            if "localhost" in self.GOOGLE_REDIRECT_URI:
+            if self.GOOGLE_REDIRECT_URI and "localhost" in self.GOOGLE_REDIRECT_URI:
                 raise ValueError("GOOGLE_REDIRECT_URI cannot use localhost in production")
-            if "localhost" in self.FRONTEND_URL:
+            if self.FRONTEND_URL and "localhost" in self.FRONTEND_URL:
                 raise ValueError("FRONTEND_URL cannot use localhost in production")
         return self
 
@@ -132,14 +130,9 @@ class Settings(BaseSettings):
 
 
 # ── Single cached instance ────────────────────────────────────────────────────
-# lru_cache ensures .env is parsed only once at startup.
-# Use get_settings() in FastAPI Depends() for testability.
-
 @lru_cache()
 def get_settings() -> Settings:
     return Settings()
 
 
-# Convenience alias — your existing imports still work unchanged:
-#   from app.config.settings import settings   ✅ still works
 settings = get_settings()
