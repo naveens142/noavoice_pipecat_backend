@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     DB_SCHEMA: str = "noavoice_ns"
 
     # ── External APIs ─────────────────────────────────────────────────────
-    OPENWEATHER_API_KEY: str = "[FILTERED_OPENWEATHER_KEY]"
+    OPENWEATHER_API_KEY: str
 
     # ── Security / JWT ────────────────────────────────────────────────────
     # Generate with: python -c "import secrets; print(secrets.token_hex(64))"
@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     GOOGLE_DISCOVERY_URL: str = "https://accounts.google.com/.well-known/openid-configuration"
 
     # ── Redis (CSRF state + nonce storage) ────────────────────────────────
-    REDIS_URL:str="rediss://default:[FILTERED_REDIS_PASS]@rapid-anemone-67967.upstash.io:6379"
+    REDIS_URL:str
 
     # ── Frontend ──────────────────────────────────────────────────────────
     FRONTEND_URL: str= "http://localhost:5173"
@@ -61,9 +61,9 @@ class Settings(BaseSettings):
     AGENT_BASE_URL: str = "http://localhost:7860"
 
     # TWILIO
-    TWILIO_ACCOUNT_SID: str = "[FILTERED_TWILIO_SID]"
-    TWILIO_AUTH_TOKEN: str = "[FILTERED_TWILIO_TOKEN]"
-    TWILIO_PHONE_NUMBER: str = "[FILTERED_TWILIO_NUM]"
+    TWILIO_ACCOUNT_SID: str
+    TWILIO_AUTH_TOKEN: str
+    TWILIO_PHONE_NUMBER: str 
 
     # Your public URL (use ngrok for local dev)
     BASE_URL: str = "https://incretory-unerodable-tiffani.ngrok-free.dev"
