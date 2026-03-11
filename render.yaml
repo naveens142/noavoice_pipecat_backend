@@ -13,7 +13,7 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: DEBUG
-        value: "False"
+        value: False
       - key: PYTHON_VERSION
         value: 3.11.0
 
