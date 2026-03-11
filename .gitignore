@@ -63,8 +63,10 @@ celerybeat-schedule
 # dotenv
 .env
 .env.*
+.env.local
 !.env.example
 myenv/
+venv/
 
 # IDE
 .idea/
@@ -91,6 +93,7 @@ alembic/versions/__pycache__/
 
 # VS Code
 .vscode/
+.vscode-server/
 
 # MacOS
 .DS_Store
@@ -98,6 +101,27 @@ alembic/versions/__pycache__/
 # Windows
 Thumbs.db
 ehthumbs.db
+
+# Logs
+logs/
+*.log
+
+# Knowledge Base uploads (local)
+app/knowledge_base/
+
+# Runtime
+.pytest_cache/
+.pytype/
+test-results/
+
+# IDE Python cache
+*.pyc
+__pycache__/
+
+# Render specific
+.render/
+.render-env
+
 Desktop.ini
 
 # Test output

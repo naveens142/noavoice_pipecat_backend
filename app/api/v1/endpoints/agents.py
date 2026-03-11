@@ -38,7 +38,53 @@ tags=["Agents"],
 response_model=AgentResponse,
 status_code=status.HTTP_201_CREATED,
 summary="Create new agent",
-description="Create a new agent with name and description. Other fields auto-populated with defaults."
+description="Create a new agent with name and description. Other fields auto-populated with defaults.",
+responses={
+    201: {
+        "description": "Agent successfully created",
+        "content": {
+            "application/json": {
+                "example": {
+                    "id": "123e4567-e89b-12d3-a456-426614174000",
+                    "user_id": "550e8400-e29b-41d4-a716-446655440000",
+                    "name": "Customer Support Agent",
+                    "description": "AI agent to handle customer support inquiries",
+                    "voice": "",
+                    "language": "EN",
+                    "timezone": "America/Detroit",
+                    "system_prompt": "",
+                    "first_message": "",
+                    "end_call_message": "",
+                    "voicemail_message": "",
+                    "first_message_mode": "assistant-speaks-first",
+                    "end_call_function_enabled": True,
+                    "recording_enabled": False,
+                    "detect_caller_number": False,
+                    "multi_lingual_enabled": False,
+                    "is_active": True,
+                    "created_at": "2026-03-11T08:42:33.011000Z",
+                    "updated_at": "2026-03-11T08:42:33.011000Z"
+                }
+            }
+        }
+    },
+    400: {
+        "description": "Invalid request data",
+        "content": {
+            "application/json": {
+                "example": {"detail": "Agent name is required"}
+            }
+        }
+    },
+    401: {
+        "description": "Unauthorized",
+        "content": {
+            "application/json": {
+                "example": {"detail": "Invalid or expired token"}
+            }
+        }
+    }
+}
 )
 async def create_agent(
     request: CreateAgentRequest,
@@ -47,10 +93,14 @@ async def create_agent(
 ) -> AgentResponse:
     """
     Create a new agent.
-    - **name** (required): Agent name
-    - **description** (optional): Agent description
+    
+    **Required fields:**
+    - **name**: Agent name (string)
+    
+    **Optional fields:**
+    - **description**: Agent description (string)
 
-    Auto-populated defaults:
+    **Auto-populated defaults:**
     - voice: "" (empty)
     - language: "EN"
     - timezone: "America/Detroit"
@@ -58,7 +108,12 @@ async def create_agent(
     - first_message: "" (empty)
     - end_call_message: "" (empty)
     - voicemail_message: "" (empty)
-    - And other configuration flags with standard defaults
+    - first_message_mode: "assistant-speaks-first"
+    - end_call_function_enabled: true
+    - recording_enabled: false
+    - detect_caller_number: false
+    - multi_lingual_enabled: false
+    - is_active: true
     """
     service = AgentAsyncService(db)
     return await service.create_agent(str(current_user.id), request)
@@ -67,7 +122,45 @@ async def create_agent(
 "",
 response_model=PaginatedAgentResponse,
 summary="List agents",
-description="Get paginated list of agents for current user"
+description="Get paginated list of agents for current user",
+responses={
+    200: {
+        "description": "List of agents",
+        "content": {
+            "application/json": {
+                "example": {
+                    "items": [
+                        {
+                            "id": "123e4567-e89b-12d3-a456-426614174000",
+                            "user_id": "550e8400-e29b-41d4-a716-446655440000",
+                            "name": "Customer Support Agent",
+                            "description": "AI agent to handle customer support inquiries",
+                            "voice": "Xb7hH8MSUJpSbSDYk0k2",
+                            "language": "EN",
+                            "timezone": "America/Detroit",
+                            "system_prompt": "You are a helpful customer support representative...",
+                            "first_message": "Hello! How can I help you today?",
+                            "end_call_message": "Thank you for contacting us!",
+                            "voicemail_message": "Please leave a message after the beep.",
+                            "first_message_mode": "assistant-speaks-first",
+                            "end_call_function_enabled": True,
+                            "recording_enabled": True,
+                            "detect_caller_number": False,
+                            "multi_lingual_enabled": False,
+                            "is_active": True,
+                            "created_at": "2026-03-07T08:42:33.011000Z",
+                            "updated_at": "2026-03-07T08:42:33.011000Z"
+                        }
+                    ],
+                    "total": 1,
+                    "page": 1,
+                    "page_size": 20,
+                    "total_pages": 1
+                }
+            }
+        }
+    }
+}
 )
 async def list_agents(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
@@ -77,6 +170,8 @@ async def list_agents(
 ) -> PaginatedAgentResponse:
     """
     Get list of agents for current user with pagination.
+    
+    **Query parameters:**
     - **skip**: Pagination offset (default: 0)
     - **limit**: Page size (default: 20, max: 100)
     """
@@ -88,7 +183,39 @@ async def list_agents(
 "/search",
 response_model=list[AgentResponse],
 summary="Search agents",
-description="Search agents by name or description"
+description="Search agents by name or description",
+responses={
+    200: {
+        "description": "Search results",
+        "content": {
+            "application/json": {
+                "example": [
+                    {
+                        "id": "123e4567-e89b-12d3-a456-426614174000",
+                        "user_id": "550e8400-e29b-41d4-a716-446655440000",
+                        "name": "Customer Support Agent",
+                        "description": "AI agent to handle customer support inquiries",
+                        "voice": "Xb7hH8MSUJpSbSDYk0k2",
+                        "language": "EN",
+                        "timezone": "America/Detroit",
+                        "system_prompt": "You are a helpful customer support representative...",
+                        "first_message": "Hello! How can I help you today?",
+                        "end_call_message": "Thank you for contacting us!",
+                        "voicemail_message": "Please leave a message after the beep.",
+                        "first_message_mode": "assistant-speaks-first",
+                        "end_call_function_enabled": True,
+                        "recording_enabled": True,
+                        "detect_caller_number": False,
+                        "multi_lingual_enabled": False,
+                        "is_active": True,
+                        "created_at": "2026-03-07T08:42:33.011000Z",
+                        "updated_at": "2026-03-07T08:42:33.011000Z"
+                    }
+                ]
+            }
+        }
+    }
+}
 )
 async def search_agents(
     q: str = Query(..., min_length=1, description="Search term"),
@@ -97,7 +224,9 @@ async def search_agents(
     ) -> list[AgentResponse]:
     """
     Search agents by name or description.
-    - **q**: Search term (required, min 1 character)
+    
+    **Query parameters:**
+    - **q**: Search term (required, min 1 character) - searches agent name and description
     """
     service = AgentAsyncService(db)
     return await service.search_agents(str(current_user.id), q)
@@ -106,7 +235,32 @@ async def search_agents(
 "/tools/available",
 response_model=list[dict],
 summary="Get available tools",
-description="Get list of all available tools for agents"
+description="Get list of all available tools for agents",
+responses={
+    200: {
+        "description": "List of available tools",
+        "content": {
+            "application/json": {
+                "example": [
+                    {
+                        "id": "tool-001",
+                        "tool_key": "cal_com_appointment",
+                        "display_name": "Cal.com Appointment Booking",
+                        "category": "appointment",
+                        "description": "Book and manage appointments using Cal.com"
+                    },
+                    {
+                        "id": "tool-002",
+                        "tool_key": "twilio_sms",
+                        "display_name": "Send SMS",
+                        "category": "external",
+                        "description": "Send SMS messages via Twilio"
+                    }
+                ]
+            }
+        }
+    }
+}
 )
 async def get_available_tools(
     db: AsyncSession = Depends(get_db),
@@ -114,12 +268,13 @@ async def get_available_tools(
 ) -> list[dict]:
     """
     Get all available tools that can be assigned to agents.
-    Returns list with:
-    - id: Tool ID
-    - tool_key: Technical identifier
-    - display_name: User-friendly name
-    - category: "appointment" or "external"
-    - description: Tool description
+    
+    **Returns array with:**
+    - **id**: Tool unique identifier
+    - **tool_key**: Technical identifier
+    - **display_name**: User-friendly name
+    - **category**: "appointment" or "external"
+    - **description**: Tool description
     """
     service = AgentActionAsyncService(db)
     return await service.get_available_tools()
@@ -218,7 +373,15 @@ current_user: User = Depends(get_current_user)
 "/{agent_id}",
 status_code=status.HTTP_204_NO_CONTENT,
 summary="Delete agent",
-description="Soft delete agent (can be restored from database if needed)"
+description="Soft delete agent (can be restored from database if needed)",
+responses={
+    204: {
+        "description": "Agent successfully deleted"
+    },
+    404: {
+        "description": "Agent not found"
+    }
+}
 )
 
 async def delete_agent(
@@ -228,9 +391,10 @@ current_user: User = Depends(get_current_user)
 ) -> None:
     """
     Delete agent (soft delete).
+    
     Agent is marked as deleted but data is preserved in database.
-    Returns 404 if agent not found.
-    Returns 403 if not authorized.
+    **Returns 404** if agent not found.
+    **Returns 403** if not authorized.
     """
     # Normalize agent_id (trim whitespace, handle URL encoding, case-insensitive)
     normalized_agent_id = normalize_uuid(agent_id)

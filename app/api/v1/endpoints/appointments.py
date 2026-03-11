@@ -76,7 +76,33 @@ class CancelAppointmentRequest(BaseModel):
 @router.get(
     "/available-slots",
     summary="Get available appointment slots",
-    description="Retrieve available appointment slots for a specific date"
+    description="Retrieve available appointment slots for a specific date",
+    responses={
+        200: {
+            "description": "Available slots retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "success",
+                        "data": [
+                            "09:00 AM",
+                            "10:00 AM",
+                            "02:00 PM",
+                            "03:30 PM"
+                        ]
+                    }
+                }
+            }
+        },
+        500: {
+            "description": "Failed to fetch available slots",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Failed to fetch available slots: Connection error"}
+                }
+            }
+        }
+    }
 )
 async def get_available_appointment_slots(
     date: str = Query(..., description="Date in YYYY-MM-DD format"),
@@ -93,7 +119,7 @@ async def get_available_appointment_slots(
     - Available slots with formatted times
     - Message if no slots available
     
-    **Example:**
+    **Example request:**
     ```
     GET /appointments/available-slots?date=2026-03-10&timezone=Asia/Kolkata
     ```
@@ -115,7 +141,40 @@ async def get_available_appointment_slots(
     "/book",
     status_code=status.HTTP_201_CREATED,
     summary="Book an appointment",
-    description="Create a new appointment booking"
+    description="Create a new appointment booking",
+    responses={
+        201: {
+            "description": "Appointment successfully booked",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "success",
+                        "data": {
+                            "booking_id": "cal_123456",
+                            "event_id": "evt_789",
+                            "event_link": "https://cal.com/event/booking123",
+                            "organizer_name": "Dr. Smith",
+                            "organizer_email": "smith@example.com",
+                            "title": "Appointment",
+                            "description": "First time patient",
+                            "start_time": "2026-03-12T15:00:00Z",
+                            "end_time": "2026-03-12T15:30:00Z",
+                            "duration_minutes": 30,
+                            "confirmed": True
+                        }
+                    }
+                }
+            }
+        },
+        400: {
+            "description": "Invalid booking request or datetime",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Failed to book appointment: No available slots for requested time"}
+                }
+            }
+        }
+    }
 )
 async def book_new_appointment(request: BookAppointmentRequest):
     """
@@ -170,7 +229,39 @@ async def book_new_appointment(request: BookAppointmentRequest):
 @router.get(
     "/booking",
     summary="Get booking details",
-    description="Retrieve appointment booking details by email address"
+    description="Retrieve appointment booking details by email address",
+    responses={
+        200: {
+            "description": "Booking details retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "success",
+                        "data": {
+                            "booking_id": "cal_123456",
+                            "event_id": "evt_789",
+                            "event_link": "https://cal.com/event/booking123",
+                            "organizer_name": "Dr. Smith",
+                            "title": "Appointment",
+                            "start_time": "2026-03-12T15:00:00Z",
+                            "end_time": "2026-03-12T15:30:00Z",
+                            "duration_minutes": 30,
+                            "status": "confirmed",
+                            "attendee_email": "john@example.com"
+                        }
+                    }
+                }
+            }
+        },
+        404: {
+            "description": "No booking found for email",
+            "content": {
+                "application/json": {
+                    "example": {"status": "success", "data": "No booking found"}
+                }
+            }
+        }
+    }
 )
 async def get_appointment_booking(
     email: str = Query(..., description="Patient email address")
@@ -208,7 +299,36 @@ async def get_appointment_booking(
 @router.post(
     "/reschedule",
     summary="Reschedule an appointment",
-    description="Change the date/time of an existing appointment"
+    description="Change the date/time of an existing appointment",
+    responses={
+        200: {
+            "description": "Appointment successfully rescheduled",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "success",
+                        "data": {
+                            "booking_id": "cal_123456",
+                            "old_start_time": "2026-03-12T15:00:00Z",
+                            "new_start_time": "2026-03-15T10:00:00Z",
+                            "old_end_time": "2026-03-12T15:30:00Z",
+                            "new_end_time": "2026-03-15T10:30:00Z",
+                            "reschedule_reason": "Conflict with other meeting",
+                            "confirmed": True
+                        }
+                    }
+                }
+            }
+        },
+        400: {
+            "description": "Invalid reschedule request",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Failed to reschedule appointment: No available slots for new time"}
+                }
+            }
+        }
+    }
 )
 async def reschedule_existing_appointment(request: RescheduleAppointmentRequest):
     """
@@ -258,7 +378,34 @@ async def reschedule_existing_appointment(request: RescheduleAppointmentRequest)
 @router.post(
     "/cancel",
     summary="Cancel an appointment",
-    description="Cancel an existing appointment booking"
+    description="Cancel an existing appointment booking",
+    responses={
+        200: {
+            "description": "Appointment successfully cancelled",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "success",
+                        "data": {
+                            "booking_id": "cal_123456",
+                            "event_id": "evt_789",
+                            "cancelled_at": "2026-03-11T11:30:00Z",
+                            "cancel_reason": "No longer need the appointment",
+                            "confirmation_email": "sent"
+                        }
+                    }
+                }
+            }
+        },
+        400: {
+            "description": "Invalid cancellation request",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Failed to cancel appointment: Booking not found"}
+                }
+            }
+        }
+    }
 )
 async def cancel_existing_appointment(request: CancelAppointmentRequest):
     """

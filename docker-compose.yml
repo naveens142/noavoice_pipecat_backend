@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: noavoice-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/noavoice_dev?sslmode=disable
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - .:/app
+      - logs:/app/logs
+    depends_on:
+      - db
+      - redis
+    command: python main.py
+    networks:
+      - noavoice-network
+
+  db:
+    image: postgres:15-alpine
+    container_name: noavoice-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=noavoice_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - noavoice-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: noavoice-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - noavoice-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
+  logs:
+
+networks:
+  noavoice-network:
+    driver: bridge

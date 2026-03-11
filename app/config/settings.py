@@ -20,8 +20,8 @@ class Settings(BaseSettings):
 
     # ── App ───────────────────────────────────────────────────────────────
     APP_NAME: str = "NoaVoiceAI"
-    DEBUG: bool = True
-    ENVIRONMENT: Literal["development", "staging", "production"] = "development"
+    DEBUG: bool = False
+    ENVIRONMENT: Literal["development", "staging", "production"] = "production"
 
     # ── Cal.com V2 ────────────────────────────────────────────────────────
     CALCOM_API_KEY: str
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     # ── Security / JWT ────────────────────────────────────────────────────
     # Generate with: python -c "import secrets; print(secrets.token_hex(64))"
     SECRET_KEY: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     BCRYPT_ROUNDS: int = 12
 
@@ -52,13 +52,21 @@ class Settings(BaseSettings):
     GOOGLE_DISCOVERY_URL: str = "https://accounts.google.com/.well-known/openid-configuration"
 
     # ── Redis (CSRF state + nonce storage) ────────────────────────────────
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_URL:str="rediss://default:[FILTERED_REDIS_PASS]@rapid-anemone-67967.upstash.io:6379"
 
     # ── Frontend ──────────────────────────────────────────────────────────
     FRONTEND_URL: str= "http://localhost:5173"
 
     # -----------Pipecat Agent-----------------------------------------------------
     AGENT_BASE_URL: str = "http://localhost:7860"
+
+    # TWILIO
+    TWILIO_ACCOUNT_SID: str = "[FILTERED_TWILIO_SID]"
+    TWILIO_AUTH_TOKEN: str = "[FILTERED_TWILIO_TOKEN]"
+    TWILIO_PHONE_NUMBER: str = "[FILTERED_TWILIO_NUM]"
+
+    # Your public URL (use ngrok for local dev)
+    BASE_URL: str = "https://incretory-unerodable-tiffani.ngrok-free.dev"
 
     # Knowledge Base Configuration - Absolute path based on actual file location
     @computed_field  # type: ignore[misc]
@@ -68,6 +76,10 @@ class Settings(BaseSettings):
         settings_dir = os.path.dirname(os.path.abspath(__file__))  # /path/to/app/config
         project_root = os.path.dirname(os.path.dirname(settings_dir))  # /path/to/project
         kb_dir = os.path.join(project_root, 'app', 'knowledge_base')
+        # Fallback to /tmp for production (Render)
+        if not os.path.exists(kb_dir) and self.ENVIRONMENT == "production":
+            kb_dir = "/tmp/knowledge_base"
+            os.makedirs(kb_dir, exist_ok=True)
         return kb_dir
     
     # Pagination defaults

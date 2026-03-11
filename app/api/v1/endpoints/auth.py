@@ -39,6 +39,41 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Register with email and password",
+    responses={
+        201: {
+            "description": "User successfully registered",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "email": "john.doe@example.com",
+                        "full_name": "John Doe",
+                        "picture": None,
+                        "provider": "local",
+                        "is_verified": False,
+                        "created_at": "2026-03-11T08:42:33.011000Z",
+                        "last_login": None
+                    }
+                }
+            }
+        },
+        409: {
+            "description": "Email already registered",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Email already registered"}
+                }
+            }
+        },
+        400: {
+            "description": "Invalid password or input",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Password must contain at least one uppercase letter"}
+                }
+            }
+        }
+    }
 )
 @limiter.limit("3/minute")   # prevent account spam
 async def register(
@@ -49,8 +84,12 @@ async def register(
     """
     Register a new user with email and password.
 
-    Rate limit: 3 requests/minute per IP.
-    Password requirements: 8+ chars, 1 uppercase, 1 digit.
+    **Rate limit:** 3 requests/minute per IP.
+    
+    **Password requirements:**
+    - Minimum 8 characters
+    - At least 1 uppercase letter
+    - At least 1 digit
     """
     try:
         user = await AuthService.register(
@@ -71,6 +110,37 @@ async def register(
     "/login",
     response_model=TokenResponse,
     summary="Login with email and password",
+    responses={
+        200: {
+            "description": "Successfully authenticated",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDAiLCJleHAiOjE3NDE2MDQ1NTMsImlhdCI6MTc0MTYwMzY1M30.ABC123XYZ",
+                        "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDAiLCJleHAiOjE3NDIyMDg0NTN9.DEF456UVW",
+                        "token_type": "bearer",
+                        "expires_in": 900
+                    }
+                }
+            }
+        },
+        401: {
+            "description": "Invalid email or password",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Invalid email or password"}
+                }
+            }
+        },
+        429: {
+            "description": "Too many login attempts (rate limited)",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Rate limit exceeded"}
+                }
+            }
+        }
+    }
 )
 @limiter.limit("5/minute")   # brute force protection
 async def login(
@@ -81,9 +151,11 @@ async def login(
     """
     Authenticate with email and password.
 
-    Returns JWT access token (15 min) + refresh token (7 days).
-    Rate limit: 5 requests/minute per IP.
-    Account locks after 5 failed attempts for 15 minutes.
+    **Returns:** JWT access token (15 min) + refresh token (7 days)
+    
+    **Rate limit:** 5 requests/minute per IP
+    
+    **Security:** Account locks after 5 failed attempts for 15 minutes.
     """
     try:
         user, access_token, refresh_token = await AuthService.login(
@@ -136,6 +208,29 @@ async def _refresh_token_impl(
     "/refresh",
     response_model=TokenResponse,
     summary="Refresh access token",
+    responses={
+        200: {
+            "description": "New tokens issued",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                        "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                        "token_type": "bearer",
+                        "expires_in": 900
+                    }
+                }
+            }
+        },
+        401: {
+            "description": "Invalid or expired refresh token",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Invalid refresh token"}
+                }
+            }
+        }
+    }
 )
 @limiter.limit("10/minute")
 async def refresh_token(
@@ -146,7 +241,7 @@ async def refresh_token(
     """
     Exchange a refresh token for new access + refresh tokens.
 
-    OLD refresh token is immediately invalidated (rotation).
+    **Security:** Old refresh token is immediately invalidated (rotation).
     If a stolen/reused token is detected, ALL sessions are revoked.
     """
     return await _refresh_token_impl(request, payload, db)
@@ -156,6 +251,21 @@ async def refresh_token(
     "/refresh-token",
     response_model=TokenResponse,
     summary="Refresh access token (alias endpoint)",
+    responses={
+        200: {
+            "description": "New tokens issued",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                        "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                        "token_type": "bearer",
+                        "expires_in": 900
+                    }
+                }
+            }
+        }
+    }
 )
 @limiter.limit("10/minute")
 async def refresh_token_alias(
@@ -168,7 +278,7 @@ async def refresh_token_alias(
     
     This is an alias for /refresh endpoint for backwards compatibility.
 
-    OLD refresh token is immediately invalidated (rotation).
+    **Security:** Old refresh token is immediately invalidated (rotation).
     If a stolen/reused token is detected, ALL sessions are revoked.
     """
     return await _refresh_token_impl(request, payload, db)
@@ -180,6 +290,11 @@ async def refresh_token_alias(
     "/logout",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Logout — revoke refresh token",
+    responses={
+        204: {
+            "description": "Successfully logged out"
+        }
+    }
 )
 async def logout(
     payload: RefreshTokenRequest,
@@ -188,7 +303,7 @@ async def logout(
     """
     Revoke the refresh token.
 
-    Access token remains valid until its 15-min expiry.
+    **Note:** Access token remains valid until its 15-min expiry.
     UI should discard both tokens on logout.
     """
     await AuthService.logout(db, payload.refresh_token)
@@ -303,10 +418,38 @@ async def google_callback(
     "/me",
     response_model=UserResponse,
     summary="Get current authenticated user",
+    responses={
+        200: {
+            "description": "Current user profile",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "email": "john.doe@example.com",
+                        "full_name": "John Doe",
+                        "picture": "https://example.com/avatar.jpg",
+                        "provider": "local",
+                        "is_verified": True,
+                        "created_at": "2026-03-07T08:42:33.011000Z",
+                        "last_login": "2026-03-11T10:15:22.000000Z"
+                    }
+                }
+            }
+        },
+        401: {
+            "description": "Invalid or expired token",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Invalid or expired token"}
+                }
+            }
+        }
+    }
 )
 async def get_me(current_user=Depends(get_current_user)):
     """
     Returns the authenticated user's profile.
-    Requires: Authorization: Bearer <access_token>
+    
+    **Authentication:** Required (Bearer token)
     """
     return current_user
