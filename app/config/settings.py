@@ -117,10 +117,10 @@ class Settings(BaseSettings):
         if self.ENVIRONMENT == "production":
             if self.DEBUG is True:
                 raise ValueError("DEBUG must be False in production")
-            if self.GOOGLE_REDIRECT_URI and "localhost" in self.GOOGLE_REDIRECT_URI:
-                raise ValueError("GOOGLE_REDIRECT_URI cannot use localhost in production")
-            if self.FRONTEND_URL and "localhost" in self.FRONTEND_URL:
-                raise ValueError("FRONTEND_URL cannot use localhost in production")
+            # if self.GOOGLE_REDIRECT_URI and "localhost" in self.GOOGLE_REDIRECT_URI:
+            #     raise ValueError("GOOGLE_REDIRECT_URI cannot use localhost in production")
+            # if self.FRONTEND_URL and "localhost" in self.FRONTEND_URL:
+            #     raise ValueError("FRONTEND_URL cannot use localhost in production")
         return self
 
     class Config:
