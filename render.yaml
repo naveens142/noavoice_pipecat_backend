@@ -10,8 +10,6 @@ services:
     
     # Environment Variables
     envVars:
-      - key: PORT
-        value: "8000"
       - key: ENVIRONMENT
         value: production
       - key: DEBUG
